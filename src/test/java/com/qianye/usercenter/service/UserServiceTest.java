@@ -42,7 +42,7 @@ public class UserServiceTest {
      */
     @Test
     public void testEncrypt() {
-        byte[] bytes = "mypassword".getBytes();
+        byte[] bytes = "line12345678".getBytes();
         String newPassword = DigestUtils.md5DigestAsHex(bytes);
         System.out.println(newPassword);
     }

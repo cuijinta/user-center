@@ -114,18 +114,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return null;
         }
 
+        //账户不能包含特殊字符
+        String regEx = "\\pP|\\pS|\\s+";
+        Matcher matcher = Pattern.compile(regEx).matcher(userAccount);
+        if (matcher.find()) {
+            return null;
+        }
+
         //账户不能重复（写在校验特殊字符逻辑之后，减小性能开销）
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userAccount", userAccount);
         long count = this.count(queryWrapper);
         if (count > 0) {
-            return null;
-        }
-
-        //账户不能包含特殊字符
-        String regEx = "\\pP|\\pS|\\s+";
-        Matcher matcher = Pattern.compile(regEx).matcher(userAccount);
-        if (matcher.find()) {
             return null;
         }
 
@@ -156,6 +156,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         //4.记录用户的用户态
         request.getSession().setAttribute(USER_LOGIN_STATUS, safetyUser);
+        log.info("成功");
         return safetyUser;
     }
 }
