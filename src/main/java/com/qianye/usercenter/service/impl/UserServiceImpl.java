@@ -135,6 +135,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         //3.用户信息脱敏
+        User safetyUser = getSafetyUser(user);
+
+        //4.记录用户的用户态
+        request.getSession().setAttribute(USER_LOGIN_STATUS, safetyUser);
+        return safetyUser;
+    }
+
+    @Override
+    public User getSafetyUser(User user) {
         User safetyUser = new User();
         safetyUser.setId(user.getId());
         safetyUser.setUsername(user.getUsername());
@@ -142,12 +151,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safetyUser.setAvatarUrl(user.getAvatarUrl());
         safetyUser.setGender(user.getGender());
         safetyUser.setPhone(user.getPhone());
+        safetyUser.setUserRole(user.getUserRole());
         safetyUser.setCreateTime(user.getCreateTime());
         safetyUser.setUserStatus(user.getUserStatus());
         safetyUser.setEmail(user.getEmail());
 
-        //4.记录用户的用户态
-        request.getSession().setAttribute(USER_LOGIN_STATUS, safetyUser);
         return safetyUser;
     }
 }

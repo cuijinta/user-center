@@ -65,6 +65,11 @@ public class User implements Serializable {
     private Integer userStatus;
 
     /**
+     * 用户角色 0 - 普通  1 - 管理员
+     */
+    private Integer userRole;
+
+    /**
      * 是否删除
      */
     @TableLogic //表示该字段是逻辑删除字段，对应配置文件中要有说明
