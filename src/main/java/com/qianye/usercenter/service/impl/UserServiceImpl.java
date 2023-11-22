@@ -121,14 +121,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return null;
         }
 
-        //账户不能重复（写在校验特殊字符逻辑之后，减小性能开销）
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("userAccount", userAccount);
-        long count = this.count(queryWrapper);
-        if (count > 0) {
-            return null;
-        }
-
         //1. 加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
 
