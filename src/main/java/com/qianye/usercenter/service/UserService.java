@@ -15,12 +15,13 @@ public interface UserService extends IService<User> {
     /**
      * 用户注册
      *
-     * @param userAccount 用户账户
-     * @param userPassword 用户密码
+     * @param userAccount   用户账户
+     * @param userPassword  用户密码
      * @param checkPassword 校验密码
+     * @param code
      * @return 新用户id
      */
-    long userRegister(String userAccount, String userPassword, String checkPassword);
+    long userRegister(String userAccount, String userPassword, String checkPassword, String code);
 
     /**
      * 用户登录
@@ -38,4 +39,11 @@ public interface UserService extends IService<User> {
      * @return
      */
     public User getSafetyUser(User user);
+
+    /**
+     * 用户注销
+     *
+     * @return
+     */
+    Integer userLogout(HttpServletRequest request);
 }

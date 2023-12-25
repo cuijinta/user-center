@@ -2,6 +2,8 @@ package com.qianye.usercenter.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.qianye.usercenter.constant.ErrorCode;
+import com.qianye.usercenter.exception.GlobalException;
 import com.qianye.usercenter.model.User;
 import com.qianye.usercenter.service.UserService;
 import com.qianye.usercenter.mapper.UserMapper;
@@ -45,30 +47,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @param userAccount   用户账户
      * @param userPassword  用户密码
      * @param checkPassword 校验密码
+     * @param code
      * @return 新用户id
      */
-    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+    public long userRegister(String userAccount, String userPassword, String checkPassword, String code) {
         //1. 校验(采用apache commons lang依赖中的方法来一次判断多个变量是否为空)
-        if (StringUtils.isAllBlank(userAccount, userPassword, checkPassword)) {
-            return -1L;
+        if (StringUtils.isAllBlank(userAccount, userPassword, checkPassword, code)) {
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "参数不能为空");
         }
         if (userAccount.length() < 4) {
-            return -1L;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "账户名长度不能小于4位");
         }
         if (userPassword.length() < 8 || checkPassword.length() < 8) {
-            return -1L;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "密码长度不小于8位");
+        }
+        if(code.length() > 5) {
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "用户编号不能超过5位");
         }
 
         //账户不能包含特殊字符
         String regEx = "\\pP|\\pS|\\s+";
         Matcher matcher = Pattern.compile(regEx).matcher(userAccount);
         if (matcher.find()) {
-            return -1L;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "用户名不能包含特殊字符");
         }
 
         //保持两次密码相同
         if (!userPassword.equals(checkPassword)) {
-            return -1L;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR);
         }
 
         //账户不能重复（写在校验特殊字符逻辑之后，减小性能开销）
@@ -76,7 +82,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.eq("userAccount", userAccount);
         long count = userMapper.selectCount(queryWrapper);
         if (count > 0) {
-            return -1L;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "用户已存在");
+        }
+
+        //用户编号不能重复
+        QueryWrapper<User> queryWrapper1 = new QueryWrapper<>();
+        queryWrapper1.eq("code", code);
+        count = userMapper.selectCount(queryWrapper1);
+        if(count >0) {
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "编号不能重复");
         }
 
         //2. 加密
@@ -86,10 +100,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User user = new User();
         user.setUserAccount(userAccount);
         user.setUserPassword(encryptPassword);
+        user.setCode(code);
         boolean isSave = this.save(user);
 
         if (!isSave) {
-            return -1L;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "用户已存在");
         }
         return user.getId();
     }
@@ -105,20 +120,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public User doLogin(String userAccount, String userPassword, HttpServletRequest request) {
         //1. 校验(采用apache commons lang依赖中的方法来一次判断多个变量是否为空)
         if (StringUtils.isAllBlank(userAccount, userPassword)) {
-            return null;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "参数不能为空");
         }
         if (userAccount.length() < 4) {
-            return null;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "账户名长度不能小于4位");
         }
         if (userPassword.length() < 8) {
-            return null;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "密码长度不小于8位");
         }
 
         //账户不能包含特殊字符
         String regEx = "\\pP|\\pS|\\s+";
         Matcher matcher = Pattern.compile(regEx).matcher(userAccount);
         if (matcher.find()) {
-            return null;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "用户名不能包含特殊字符");
         }
 
         //1. 加密
@@ -131,7 +146,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User user = userMapper.selectOne(queryWrapper1);
         if (user == null) { //用户不存在
             log.info("user login failed, userAccount cannot match userPassword");
-            return null;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "用户不存在");
         }
 
         //3.用户信息脱敏
@@ -142,6 +157,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return safetyUser;
     }
 
+    /**
+     * 用户脱敏
+     *
+     * @param user
+     * @return
+     */
     @Override
     public User getSafetyUser(User user) {
         if(user == null) {
@@ -158,8 +179,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safetyUser.setCreateTime(user.getCreateTime());
         safetyUser.setUserStatus(user.getUserStatus());
         safetyUser.setEmail(user.getEmail());
+        safetyUser.setCode(user.getCode());
 
         return safetyUser;
+    }
+
+    /**
+     * 用户注销
+     *
+     * @return 1表示注销成功
+     */
+    @Override
+    public Integer userLogout(HttpServletRequest request) {
+        request.getSession().removeAttribute(USER_LOGIN_STATUS);
+        return 1;
     }
 }
 

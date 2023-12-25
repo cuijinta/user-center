@@ -20,4 +20,6 @@ public class UserRegisterRequest {
 
     private String checkPassword;
 
+    private String code;
+
 }

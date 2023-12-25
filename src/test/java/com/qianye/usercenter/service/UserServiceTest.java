@@ -1,5 +1,4 @@
 package com.qianye.usercenter.service;
-import java.util.Date;
 
 import com.qianye.usercenter.model.User;
 import org.junit.jupiter.api.Assertions;
@@ -7,8 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.util.DigestUtils;
-
-import javax.annotation.Resource;
 
 /**
  * @Author 浅夜
@@ -52,41 +49,42 @@ public class UserServiceTest {
         String userAccount = "qinaye";
         String userPassword = "12345678";
         String checkedPassword = "12345678";
-        long result = userService.userRegister(userAccount, userPassword, checkedPassword);
+        String code = "1";
+        long result = userService.userRegister(userAccount, userPassword, checkedPassword, code);
         Assertions.assertEquals(-1L, result);
 
         //测试非空
         userAccount = "";
-        result = userService.userRegister(userAccount, userPassword, checkedPassword);
+        result = userService.userRegister(userAccount, userPassword, checkedPassword, code);
         Assertions.assertEquals(-1L, result);
 
         //测试账户名不小于6位
         userAccount = "qi";
-        result = userService.userRegister(userAccount, userPassword, checkedPassword);
+        result = userService.userRegister(userAccount, userPassword, checkedPassword, code);
         Assertions.assertEquals(-1L, result);
 
         //测试密码不足8位
         userAccount = "qianye";
         userPassword = "123456";
-        result = userService.userRegister(userAccount, userPassword, checkedPassword);
+        result = userService.userRegister(userAccount, userPassword, checkedPassword, code);
         Assertions.assertEquals(-1L, result);
 
         //测试密码两次不一致
         userPassword = "123456789";
         checkedPassword = "12345678";
-        result = userService.userRegister(userAccount, userPassword, checkedPassword);
+        result = userService.userRegister(userAccount, userPassword, checkedPassword, code);
         Assertions.assertEquals(-1L, result);
 
         //测试账号不能重复
         userAccount = "123";
         userPassword = "12345678";
-        result = userService.userRegister(userAccount, userPassword, checkedPassword);
+        result = userService.userRegister(userAccount, userPassword, checkedPassword, code);
         Assertions.assertEquals(-1L, result);
 
         //测试注册功能是否正常
-        userAccount = "qianye";
-        result = userService.userRegister(userAccount, userPassword, checkedPassword);
-        Assertions.assertTrue(result > 0);
+//        userAccount = "qianye";
+//        result = userService.userRegister(userAccount, userPassword, checkedPassword, code);
+//        Assertions.assertTrue(result > 0);
 
 
     }

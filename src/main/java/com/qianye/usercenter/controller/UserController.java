@@ -1,10 +1,14 @@
 package com.qianye.usercenter.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.qianye.usercenter.common.Result;
+import com.qianye.usercenter.constant.ErrorCode;
+import com.qianye.usercenter.exception.GlobalException;
 import com.qianye.usercenter.model.User;
 import com.qianye.usercenter.model.request.UserLoginRequest;
 import com.qianye.usercenter.model.request.UserRegisterRequest;
 import com.qianye.usercenter.service.UserService;
+import com.qianye.usercenter.utils.ResultUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -36,19 +40,20 @@ public class UserController {
      * @return
      */
     @PostMapping("/register")
-    public Long userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
+    public Result<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
-            return null;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR);
         }
 
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        if (StringUtils.isAllBlank(userAccount, userPassword, checkPassword)) {
-            return null;
+        String code = userRegisterRequest.getCode();
+        if (StringUtils.isAllBlank(userAccount, userPassword, checkPassword, code)) {
+            throw new GlobalException(ErrorCode.PARAMS_ERROR);
         }
-        return userService.userRegister(userAccount, userPassword, checkPassword);
-
+        long result = userService.userRegister(userAccount, userPassword, checkPassword, code);
+        return ResultUtils.success(result);
     }
 
     /**
@@ -59,17 +64,33 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
-    public User userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
+    public Result<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         if (userLoginRequest == null) {
-            return null;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR);
         }
 
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAllBlank(userAccount, userPassword)) {
-            return null;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR, "用户用或密码错误");
         }
-        return userService.doLogin(userAccount, userPassword, request);
+        User user = userService.doLogin(userAccount, userPassword, request);
+        return ResultUtils.success(user);
+    }
+
+    /**
+     * 用户注销
+     *
+     * @param request
+     * @return
+     */
+    @PostMapping("/logout")
+    public Result<Integer> userLogout(HttpServletRequest request) {
+        if(request == null) {
+            throw new GlobalException(ErrorCode.NOT_LOGIN);
+        }
+        Integer userLogout = userService.userLogout(request);
+        return ResultUtils.success(userLogout);
     }
 
     /**
@@ -79,29 +100,30 @@ public class UserController {
      * @return
      */
     @GetMapping("/current")
-    public User currentUser(HttpServletRequest request) {
+    public Result<User> currentUser(HttpServletRequest request) {
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATUS);
         User currentUser = (User) userObj;
-        if(currentUser == null) {
-            return null;
+        if (currentUser == null) {
+            throw new GlobalException(ErrorCode.NOT_LOGIN, "请先登录");
         }
         long userId = currentUser.getId();
         //todo: 校验用户是否合法
         User user = userService.getById(userId);
-        return userService.getSafetyUser(user);
+        User safetyUser = userService.getSafetyUser(user);
+        return ResultUtils.success(safetyUser);
     }
 
     /**
      * 管理员根据用户名搜索用户
      *
-     * @param username
-     * @param request
+     * @param username 用户名
+     * @param request  请求体
      * @return
      */
     @GetMapping("/search")
-    public List<User> searchUsers(String username, HttpServletRequest request) {
+    public Result<List<User>> searchUsers(String username, HttpServletRequest request) {
         if (!isAdmin(request)) {
-            return new ArrayList<>();
+            throw new GlobalException(ErrorCode.NO_AUTH);
         }
 
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
@@ -109,7 +131,8 @@ public class UserController {
             queryWrapper.like("username", username);
         }
         List<User> userList = userService.list(queryWrapper);
-        return userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        List<User> safetyUserList = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(safetyUserList);
     }
 
     /**
@@ -120,17 +143,18 @@ public class UserController {
      * @return
      */
     @PostMapping("/delete")
-    public boolean deleteUser(@RequestBody long id, HttpServletRequest request) {
+    public Result<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
         //鉴权，不是管理员不能删除
         if (!isAdmin(request)) {
-            return false;
+            throw new GlobalException(ErrorCode.NO_AUTH);
         }
 
         if (id <= 0) {
-            return false;
+            throw new GlobalException(ErrorCode.PARAMS_ERROR);
         }
 
-        return userService.removeById(id);
+        boolean isRemove = userService.removeById(id);
+        return ResultUtils.success(isRemove);
     }
 
     /**
@@ -145,7 +169,4 @@ public class UserController {
         User user = (User) userObject;
         return user != null && user.getUserRole() == ADMIN_ROLE;
     }
-
-
-
 }
